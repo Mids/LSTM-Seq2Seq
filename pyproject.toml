@@ -1,0 +1,34 @@
+[project]
+name = "lstm-seq2seq"
+version = "0.1.0"
+description = "LSTM-based sequence-to-sequence model built with PyTorch"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=3.0.2",
+    "sentencepiece>=0.2.0",
+    "torch==2.7.0",
+]
+
+[project.scripts]
+lstm-seq2seq = "lstm_seq2seq:main"
+
+[build-system]
+requires = ["uv_build>=0.10.8,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", marker = "(platform_machine != 'x86_64' and platform_machine != 'AMD64') or sys_platform == 'darwin'" },
+    { index = "pytorch-cu128", marker = "(platform_machine == 'x86_64' or platform_machine == 'AMD64') and (sys_platform == 'win32' or sys_platform == 'linux')" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

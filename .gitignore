@@ -1,0 +1,16 @@
+.venv/
+.idea/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+artifacts/
+
+all_debate_combined.csv
+*.csv
+
+.DS_Store
+Thumbs.db
