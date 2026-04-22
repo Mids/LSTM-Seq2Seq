@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,6 +36,7 @@ class TrainConfig:
     tokenizer_samples: int = 200000
     max_source_tokens: int = 128
     max_target_tokens: int = 128
+    save_every_epoch: bool = True
 
 
 def run_training(config: TrainConfig) -> None:
@@ -43,6 +45,7 @@ def run_training(config: TrainConfig) -> None:
     csv_path = Path(config.csv_path)
     artifact_dir = Path(config.artifact_dir)
     cache_dir = artifact_dir / "cache"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
     tokenizer_path = build_tokenizer(
         csv_path=csv_path,
         model_prefix=artifact_dir / "debate_unigram",
@@ -122,6 +125,28 @@ def run_training(config: TrainConfig) -> None:
         )
         for sample in sample_predictions:
             print(sample)
+        if config.save_every_epoch:
+            checkpoint_path = artifact_dir / f"checkpoint_epoch{epoch:02d}.pt"
+            save_checkpoint(
+                checkpoint_path=checkpoint_path,
+                model=model,
+                config=config,
+                tokenizer_path=tokenizer_path,
+                epoch=epoch,
+                train_loss=train_loss,
+                val_loss=val_loss,
+            )
+
+    latest_checkpoint = artifact_dir / "checkpoint_latest.pt"
+    save_checkpoint(
+        checkpoint_path=latest_checkpoint,
+        model=model,
+        config=config,
+        tokenizer_path=tokenizer_path,
+        epoch=config.epochs,
+        train_loss=train_loss,
+        val_loss=val_loss,
+    )
 
 
 def evaluate(
@@ -170,3 +195,23 @@ def resolve_device(requested_device: str) -> torch.device:
     if requested_device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but no CUDA device was found.")
     return torch.device(requested_device)
+
+
+def save_checkpoint(
+    checkpoint_path: Path,
+    model: Seq2SeqLSTM,
+    config: TrainConfig,
+    tokenizer_path: Path,
+    epoch: int,
+    train_loss: float,
+    val_loss: float,
+) -> None:
+    payload = {
+        "model_state_dict": model.state_dict(),
+        "config": json.loads(json.dumps(config.__dict__)),
+        "tokenizer_path": str(tokenizer_path),
+        "epoch": epoch,
+        "train_loss": train_loss,
+        "val_loss": val_loss,
+    }
+    torch.save(payload, checkpoint_path)

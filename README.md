@@ -38,13 +38,13 @@ PyTorch is configured through `uv` indexes:
 Run a small smoke test first:
 
 ```bash
-uv run lstm-seq2seq --epochs 1 --train-size 2048 --val-size 256 --batch-size 16
+uv run lstm-seq2seq train --epochs 1 --train-size 2048 --val-size 256 --batch-size 16
 ```
 
 Then move to a larger run:
 
 ```bash
-uv run lstm-seq2seq --epochs 3 --train-size 50000 --val-size 2000 --batch-size 32
+uv run lstm-seq2seq train --epochs 3 --train-size 50000 --val-size 2000 --batch-size 32
 ```
 
 ## What the pipeline does
@@ -72,19 +72,29 @@ These defaults are conservative so the model is easier to run as a baseline.
 Train on a specific CSV path:
 
 ```bash
-uv run lstm-seq2seq --csv-path all_debate_combined.csv
+uv run lstm-seq2seq train --csv-path all_debate_combined.csv
 ```
 
 Use a larger tokenizer vocabulary:
 
 ```bash
-uv run lstm-seq2seq --vocab-size 32000
+uv run lstm-seq2seq train --vocab-size 32000
 ```
 
 Allow longer sequences:
 
 ```bash
-uv run lstm-seq2seq --max-source-tokens 256 --max-target-tokens 256
+uv run lstm-seq2seq train --max-source-tokens 256 --max-target-tokens 256
+```
+
+## Test Interface
+
+Training now writes checkpoints to `artifacts/`, including `artifacts/checkpoint_latest.pt`.
+
+Run single-example inference with:
+
+```bash
+uv run lstm-seq2seq predict "The US should support allies more aggressively."
 ```
 
 ## Project layout
