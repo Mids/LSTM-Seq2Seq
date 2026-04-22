@@ -31,7 +31,7 @@ uv sync
 PyTorch is configured through `uv` indexes:
 
 - macOS and non-x86 machines use CPU wheels
-- Windows and Linux on `x86_64` / `AMD64` use CUDA 12.8 wheels
+- Windows and Linux on `x86_64` / `AMD64` use CUDA 11.8 wheels
 
 ## Quick start
 

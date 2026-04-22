@@ -9,7 +9,7 @@ dependencies = [
     "sentencepiece>=0.2.0",
     "setuptools>=75.0.0,<81",
     "tensorboard>=2.19.0",
-    "torch==2.7.0",
+    "torch==2.6.0",
 ]
 
 [project.scripts]
@@ -22,7 +22,7 @@ build-backend = "uv_build"
 [tool.uv.sources]
 torch = [
     { index = "pytorch-cpu", marker = "(platform_machine != 'x86_64' and platform_machine != 'AMD64') or sys_platform == 'darwin'" },
-    { index = "pytorch-cu128", marker = "(platform_machine == 'x86_64' or platform_machine == 'AMD64') and (sys_platform == 'win32' or sys_platform == 'linux')" },
+    { index = "pytorch-cu118", marker = "(platform_machine == 'x86_64' or platform_machine == 'AMD64') and (sys_platform == 'win32' or sys_platform == 'linux')" },
 ]
 
 [[tool.uv.index]]
@@ -31,6 +31,6 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [[tool.uv.index]]
-name = "pytorch-cu128"
-url = "https://download.pytorch.org/whl/cu128"
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
 explicit = true
