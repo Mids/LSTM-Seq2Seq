@@ -16,7 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     train_parser = subparsers.add_parser("train", help="Train the model.")
     train_parser.add_argument("--epochs", type=int, default=10)
-    train_parser.add_argument("--batch-size", type=int, default=32)
+    train_parser.add_argument("--batch-size", type=int, default=128)
     train_parser.add_argument("--train-size", type=int, default=50000)
     train_parser.add_argument("--val-size", type=int, default=2000)
     train_parser.add_argument("--embedding-dim", type=int, default=256)

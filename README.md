@@ -44,7 +44,7 @@ uv run lstm-seq2seq train --epochs 1 --train-size 2048 --val-size 256 --batch-si
 Then move to a larger run:
 
 ```bash
-uv run lstm-seq2seq train --epochs 3 --train-size 50000 --val-size 2000 --batch-size 32
+uv run lstm-seq2seq train --epochs 3 --train-size 50000 --val-size 2000 --batch-size 128
 ```
 
 ## What the pipeline does
@@ -62,6 +62,7 @@ Tokenizer and training artifacts are written to `artifacts/`.
 - Vocabulary size: `16000`
 - Max source tokens: `128`
 - Max target tokens: `128`
+- Default batch size: `128`
 - Default train subset: `50000`
 - Default validation subset: `2000`
 

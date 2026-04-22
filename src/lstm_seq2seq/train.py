@@ -21,7 +21,7 @@ from .model import Seq2SeqLSTM
 @dataclass(frozen=True)
 class TrainConfig:
     epochs: int = 10
-    batch_size: int = 32
+    batch_size: int = 128
     train_size: int = 50000
     val_size: int = 2000
     embedding_dim: int = 256
