@@ -111,9 +111,20 @@ Run single-example inference with:
 uv run lstm-seq2seq predict "The US should support allies more aggressively."
 ```
 
+## Parameter Sweep
+
+Run bounded five-minute trials across several hyperparameter combinations:
+
+```bash
+uv run python run_sweep.py --minutes 5
+```
+
+Results are written under `artifacts/sweeps/` as trial logs plus ranked JSON summaries.
+
 ## Project layout
 
 ```text
+run_sweep.py
 src/lstm_seq2seq/
 ├── cli.py
 ├── data.py
