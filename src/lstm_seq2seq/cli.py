@@ -28,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--min-learning-rate", type=float, default=1e-5)
     train_parser.add_argument("--device", default="auto")
     train_parser.add_argument("--seed", type=int, default=7)
-    train_parser.add_argument("--csv-path", default="all_debate_combined.csv")
+    train_parser.add_argument("--csv-path", default="data")
     train_parser.add_argument("--artifact-dir", default="artifacts")
     train_parser.add_argument("--vocab-size", type=int, default=16000)
     train_parser.add_argument("--tokenizer-samples", type=int, default=200000)

@@ -24,7 +24,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--minutes", type=float, default=5.0, help="Time budget per trial.")
     parser.add_argument("--max-runs", type=int, help="Optional cap on the number of trials.")
-    parser.add_argument("--csv-path", default="all_debate_combined.csv")
+    parser.add_argument("--csv-path", default="data")
     parser.add_argument("--artifact-dir", default="artifacts")
     parser.add_argument("--train-size", type=int, default=50000)
     parser.add_argument("--val-size", type=int, default=2000)

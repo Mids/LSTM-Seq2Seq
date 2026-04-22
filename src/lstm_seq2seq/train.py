@@ -35,7 +35,7 @@ class TrainConfig:
     min_learning_rate: float = 1e-5
     device: str = "auto"
     seed: int = 7
-    csv_path: str = "all_debate_combined.csv"
+    csv_path: str = "data"
     artifact_dir: str = "artifacts"
     vocab_size: int = 16000
     tokenizer_samples: int = 200000

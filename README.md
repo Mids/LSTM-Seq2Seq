@@ -1,14 +1,15 @@
 # LSTM Seq2Seq with uv
 
 Minimal `uv` project for training an LSTM-based sequence-to-sequence model on
-debate text. The current pipeline uses `all_debate_combined.csv` and trains a
-SentencePiece unigram tokenizer over the CSV `input` and `output` columns.
+text pairs from CSV files. The current pipeline reads every `.csv` file under
+`data/` and trains a SentencePiece unigram tokenizer over the CSV `input` and
+`output` columns.
 
 ## Requirements
 
 - Python 3.11+
 - `uv`
-- Local copy of `all_debate_combined.csv`
+- CSV files stored under `data/`
 
 ## Dataset format
 
@@ -17,8 +18,7 @@ The training code expects a CSV with at least these columns:
 - `input`
 - `output`
 
-The current debate dataset also includes `topic` and `source`, but those are
-not used by the model.
+Any extra columns such as `topic` and `source` are ignored by the model.
 
 ## Setup
 
@@ -70,10 +70,10 @@ These defaults are conservative so the model is easier to run as a baseline.
 
 ## Useful commands
 
-Train on a specific CSV path:
+Train on all CSV files in `data/`:
 
 ```bash
-uv run lstm-seq2seq train --csv-path all_debate_combined.csv
+uv run lstm-seq2seq train --csv-path data
 ```
 
 Use a larger tokenizer vocabulary:

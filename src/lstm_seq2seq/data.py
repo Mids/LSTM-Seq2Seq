@@ -71,25 +71,23 @@ class CsvSeq2SeqDataset(Dataset[TextExample]):
         target_count = max(size, 0)
         skipped = 0
 
-        with Path(csv_path).open("r", encoding="utf-8-sig", newline="") as handle:
-            reader = csv.DictReader(handle)
-            for row in reader:
-                source_text = normalize_text(row.get("input", ""))
-                target_text = normalize_text(row.get("output", ""))
-                if not source_text or not target_text:
-                    continue
-                if skipped < offset:
-                    skipped += 1
-                    continue
+        for row in iter_csv_rows(csv_path):
+            source_text = normalize_text(row.get("input", ""))
+            target_text = normalize_text(row.get("output", ""))
+            if not source_text or not target_text:
+                continue
+            if skipped < offset:
+                skipped += 1
+                continue
 
-                src_ids = tokenizer.encode(source_text, max_tokens=max_source_tokens)
-                tgt_ids = tokenizer.encode(target_text, max_tokens=max_target_tokens)
-                if not src_ids or not tgt_ids:
-                    continue
+            src_ids = tokenizer.encode(source_text, max_tokens=max_source_tokens)
+            tgt_ids = tokenizer.encode(target_text, max_tokens=max_target_tokens)
+            if not src_ids or not tgt_ids:
+                continue
 
-                self.examples.append(TextExample(src_ids=src_ids, tgt_ids=tgt_ids))
-                if len(self.examples) >= target_count:
-                    break
+            self.examples.append(TextExample(src_ids=src_ids, tgt_ids=tgt_ids))
+            if len(self.examples) >= target_count:
+                break
 
         if not self.examples:
             raise ValueError(
@@ -165,6 +163,25 @@ def normalize_text(text: str) -> str:
     return " ".join(text.split())
 
 
+def resolve_csv_files(csv_path: str | Path) -> list[Path]:
+    path = Path(csv_path)
+    if path.is_dir():
+        files = sorted(path.glob("*.csv"))
+    else:
+        files = [path]
+    if not files:
+        raise ValueError(f"No CSV files found in {csv_path}.")
+    return files
+
+
+def iter_csv_rows(csv_path: str | Path) -> Iterable[dict[str, str]]:
+    for file_path in resolve_csv_files(csv_path):
+        with file_path.open("r", encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                yield row
+
+
 def build_dataset_cache_path(
     csv_path: Path,
     tokenizer: SentencePieceTokenizer,
@@ -174,12 +191,10 @@ def build_dataset_cache_path(
     max_target_tokens: int,
     cache_dir: Path,
 ) -> Path:
-    csv_stat = csv_path.stat()
+    csv_files = resolve_csv_files(csv_path)
     cache_key = "|".join(
-        [
-            str(csv_path.resolve()),
-            str(csv_stat.st_size),
-            str(int(csv_stat.st_mtime)),
+        list(build_csv_signature(csv_files))
+        + [
             str(Path(tokenizer.model_path).resolve()),
             str(size),
             str(offset),
@@ -248,26 +263,38 @@ def write_tokenizer_corpus(
     reservoir: list[str] = []
     seen = 0
 
-    with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
-        reader = csv.DictReader(handle)
-        for row in reader:
-            for field in ("input", "output"):
-                text = normalize_text(row.get(field, ""))
-                if not text:
-                    continue
-                seen += 1
-                if len(reservoir) < sample_rows:
-                    reservoir.append(text)
-                    continue
+    for row in iter_csv_rows(csv_path):
+        for field in ("input", "output"):
+            text = normalize_text(row.get(field, ""))
+            if not text:
+                continue
+            seen += 1
+            if len(reservoir) < sample_rows:
+                reservoir.append(text)
+                continue
 
-                replace_at = rng.randint(0, seen - 1)
-                if replace_at < sample_rows:
-                    reservoir[replace_at] = text
+            replace_at = rng.randint(0, seen - 1)
+            if replace_at < sample_rows:
+                reservoir[replace_at] = text
 
     with output_path.open("w", encoding="utf-8") as handle:
         for text in reservoir:
             handle.write(text)
             handle.write("\n")
+
+
+def build_csv_signature(csv_files: list[Path]) -> list[str]:
+    signature: list[str] = []
+    for file_path in csv_files:
+        stat = file_path.stat()
+        signature.extend(
+            [
+                str(file_path.resolve()),
+                str(stat.st_size),
+                str(int(stat.st_mtime)),
+            ]
+        )
+    return signature
 
 
 def collate_batch(samples: list[TextExample]) -> Batch:
