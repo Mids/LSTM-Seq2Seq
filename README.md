@@ -53,7 +53,7 @@ uv run lstm-seq2seq train --epochs 3 --train-size 50000 --val-size 2000 --batch-
 2. Builds source-target pairs from `input -> output`.
 3. Truncates long examples to fixed token limits.
 4. Trains an encoder-decoder LSTM with teacher forcing.
-5. Prints validation loss and a few greedy-decoded examples after each epoch.
+5. Logs losses to TensorBoard and prints a few greedy-decoded examples each epoch.
 
 Tokenizer and training artifacts are written to `artifacts/`.
 
@@ -86,6 +86,19 @@ Allow longer sequences:
 
 ```bash
 uv run lstm-seq2seq train --max-source-tokens 256 --max-target-tokens 256
+```
+
+Watch loss curves in TensorBoard:
+
+```bash
+tensorboard --logdir artifacts/tensorboard
+```
+
+Each training launch now writes to its own subdirectory under
+`artifacts/tensorboard`. To name a run explicitly:
+
+```bash
+uv run lstm-seq2seq train --run-name baseline-bs128
 ```
 
 ## Test Interface

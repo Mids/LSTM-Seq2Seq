@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--tokenizer-samples", type=int, default=200000)
     train_parser.add_argument("--max-source-tokens", type=int, default=128)
     train_parser.add_argument("--max-target-tokens", type=int, default=128)
+    train_parser.add_argument("--run-name")
 
     predict_parser = subparsers.add_parser("predict", help="Run inference from a checkpoint.")
     predict_parser.add_argument("text")
@@ -72,5 +73,6 @@ def main() -> None:
         tokenizer_samples=args.tokenizer_samples,
         max_source_tokens=args.max_source_tokens,
         max_target_tokens=args.max_target_tokens,
+        run_name=args.run_name,
     )
     run_training(config)

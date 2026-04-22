@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from datetime import datetime
 
 import torch
 from torch import nn
+from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
 from .data import (
@@ -37,6 +39,7 @@ class TrainConfig:
     max_source_tokens: int = 128
     max_target_tokens: int = 128
     save_every_epoch: bool = True
+    run_name: str | None = None
 
 
 def run_training(config: TrainConfig) -> None:
@@ -45,6 +48,7 @@ def run_training(config: TrainConfig) -> None:
     csv_path = Path(config.csv_path)
     artifact_dir = Path(config.artifact_dir)
     cache_dir = artifact_dir / "cache"
+    tensorboard_dir = artifact_dir / "tensorboard" / build_run_name(config)
     artifact_dir.mkdir(parents=True, exist_ok=True)
     tokenizer_path = build_tokenizer(
         csv_path=csv_path,
@@ -95,58 +99,68 @@ def run_training(config: TrainConfig) -> None:
     ).to(device)
     criterion = nn.CrossEntropyLoss(ignore_index=PAD_TOKEN)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+    writer = SummaryWriter(log_dir=str(tensorboard_dir))
+    print(f"tensorboard_run_dir={tensorboard_dir}")
 
-    for epoch in range(1, config.epochs + 1):
-        model.train()
-        total_loss = 0.0
-        total_tokens = 0
+    try:
+        for epoch in range(1, config.epochs + 1):
+            model.train()
+            total_loss = 0.0
+            total_tokens = 0
 
-        for batch in train_loader:
-            src = batch.src.to(device)
-            src_lengths = batch.src_lengths.to(device)
-            tgt_input = batch.tgt_input.to(device)
-            tgt_output = batch.tgt_output.to(device)
+            for batch in train_loader:
+                src = batch.src.to(device)
+                src_lengths = batch.src_lengths.to(device)
+                tgt_input = batch.tgt_input.to(device)
+                tgt_output = batch.tgt_output.to(device)
 
-            optimizer.zero_grad()
-            logits = model(src, src_lengths, tgt_input)
-            loss = criterion(logits.reshape(-1, logits.size(-1)), tgt_output.reshape(-1))
-            loss.backward()
-            optimizer.step()
+                optimizer.zero_grad()
+                logits = model(src, src_lengths, tgt_input)
+                loss = criterion(logits.reshape(-1, logits.size(-1)), tgt_output.reshape(-1))
+                loss.backward()
+                optimizer.step()
 
-            non_pad = (tgt_output != PAD_TOKEN).sum().item()
-            total_loss += loss.item() * non_pad
-            total_tokens += non_pad
+                non_pad = (tgt_output != PAD_TOKEN).sum().item()
+                total_loss += loss.item() * non_pad
+                total_tokens += non_pad
 
-        train_loss = total_loss / max(total_tokens, 1)
-        val_loss, sample_predictions = evaluate(model, val_loader, criterion, device, tokenizer)
-        print(
-            f"epoch={epoch:02d} train_loss={train_loss:.4f} "
-            f"val_loss={val_loss:.4f}"
-        )
-        for sample in sample_predictions:
-            print(sample)
-        if config.save_every_epoch:
-            checkpoint_path = artifact_dir / f"checkpoint_epoch{epoch:02d}.pt"
-            save_checkpoint(
-                checkpoint_path=checkpoint_path,
-                model=model,
-                config=config,
-                tokenizer_path=tokenizer_path,
-                epoch=epoch,
-                train_loss=train_loss,
-                val_loss=val_loss,
+            train_loss = total_loss / max(total_tokens, 1)
+            val_loss, sample_predictions = evaluate(model, val_loader, criterion, device, tokenizer)
+            writer.add_scalar("loss/train", train_loss, epoch)
+            writer.add_scalar("loss/val", val_loss, epoch)
+            writer.add_scalar("optimizer/learning_rate", optimizer.param_groups[0]["lr"], epoch)
+            for index, sample in enumerate(sample_predictions):
+                writer.add_text(f"samples/epoch_{epoch:02d}_{index}", sample, epoch)
+            print(
+                f"epoch={epoch:02d} train_loss={train_loss:.4f} "
+                f"val_loss={val_loss:.4f}"
             )
+            for sample in sample_predictions:
+                print(sample)
+            if config.save_every_epoch:
+                checkpoint_path = artifact_dir / f"checkpoint_epoch{epoch:02d}.pt"
+                save_checkpoint(
+                    checkpoint_path=checkpoint_path,
+                    model=model,
+                    config=config,
+                    tokenizer_path=tokenizer_path,
+                    epoch=epoch,
+                    train_loss=train_loss,
+                    val_loss=val_loss,
+                )
 
-    latest_checkpoint = artifact_dir / "checkpoint_latest.pt"
-    save_checkpoint(
-        checkpoint_path=latest_checkpoint,
-        model=model,
-        config=config,
-        tokenizer_path=tokenizer_path,
-        epoch=config.epochs,
-        train_loss=train_loss,
-        val_loss=val_loss,
-    )
+        latest_checkpoint = artifact_dir / "checkpoint_latest.pt"
+        save_checkpoint(
+            checkpoint_path=latest_checkpoint,
+            model=model,
+            config=config,
+            tokenizer_path=tokenizer_path,
+            epoch=config.epochs,
+            train_loss=train_loss,
+            val_loss=val_loss,
+        )
+    finally:
+        writer.close()
 
 
 def evaluate(
@@ -195,6 +209,16 @@ def resolve_device(requested_device: str) -> torch.device:
     if requested_device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but no CUDA device was found.")
     return torch.device(requested_device)
+
+
+def build_run_name(config: TrainConfig) -> str:
+    if config.run_name:
+        return config.run_name
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return (
+        f"run-{timestamp}-bs{config.batch_size}-"
+        f"train{config.train_size}-val{config.val_size}"
+    )
 
 
 def save_checkpoint(
