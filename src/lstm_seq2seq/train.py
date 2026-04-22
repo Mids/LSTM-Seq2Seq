@@ -45,6 +45,7 @@ class TrainConfig:
 def run_training(config: TrainConfig) -> None:
     torch.manual_seed(config.seed)
     device = resolve_device(config.device)
+    print(f"training_device={device.type}")
     csv_path = Path(config.csv_path)
     artifact_dir = Path(config.artifact_dir)
     cache_dir = artifact_dir / "cache"
