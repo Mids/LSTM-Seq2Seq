@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -102,9 +103,96 @@ class CsvSeq2SeqDataset(Dataset[TextExample]):
     def __getitem__(self, index: int) -> TextExample:
         return self.examples[index]
 
+    @classmethod
+    def from_cache(
+        cls,
+        csv_path: str | Path,
+        tokenizer: SentencePieceTokenizer,
+        size: int,
+        offset: int = 0,
+        max_source_tokens: int = 128,
+        max_target_tokens: int = 128,
+        cache_dir: str | Path | None = None,
+    ) -> "CsvSeq2SeqDataset":
+        dataset = cls.__new__(cls)
+        csv_path = Path(csv_path)
+        cache_path = None
+
+        if cache_dir is not None:
+            cache_path = build_dataset_cache_path(
+                csv_path=csv_path,
+                tokenizer=tokenizer,
+                size=size,
+                offset=offset,
+                max_source_tokens=max_source_tokens,
+                max_target_tokens=max_target_tokens,
+                cache_dir=Path(cache_dir),
+            )
+            if cache_path.exists():
+                payload = torch.load(cache_path, map_location="cpu")
+                dataset.examples = [
+                    TextExample(src_ids=example["src_ids"], tgt_ids=example["tgt_ids"])
+                    for example in payload["examples"]
+                ]
+                return dataset
+
+        built = cls(
+            csv_path=csv_path,
+            tokenizer=tokenizer,
+            size=size,
+            offset=offset,
+            max_source_tokens=max_source_tokens,
+            max_target_tokens=max_target_tokens,
+        )
+        dataset.examples = built.examples
+
+        if cache_path is not None:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            torch.save(
+                {
+                    "examples": [
+                        {"src_ids": example.src_ids, "tgt_ids": example.tgt_ids}
+                        for example in dataset.examples
+                    ]
+                },
+                cache_path,
+            )
+
+        return dataset
+
 
 def normalize_text(text: str) -> str:
     return " ".join(text.split())
+
+
+def build_dataset_cache_path(
+    csv_path: Path,
+    tokenizer: SentencePieceTokenizer,
+    size: int,
+    offset: int,
+    max_source_tokens: int,
+    max_target_tokens: int,
+    cache_dir: Path,
+) -> Path:
+    csv_stat = csv_path.stat()
+    cache_key = "|".join(
+        [
+            str(csv_path.resolve()),
+            str(csv_stat.st_size),
+            str(int(csv_stat.st_mtime)),
+            str(Path(tokenizer.model_path).resolve()),
+            str(size),
+            str(offset),
+            str(max_source_tokens),
+            str(max_target_tokens),
+        ]
+    )
+    digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:16]
+    filename = (
+        f"{csv_path.stem}_offset{offset}_size{size}_"
+        f"src{max_source_tokens}_tgt{max_target_tokens}_{digest}.pt"
+    )
+    return cache_dir / filename
 
 
 def build_tokenizer(

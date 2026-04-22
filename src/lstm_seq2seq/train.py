@@ -42,6 +42,7 @@ def run_training(config: TrainConfig) -> None:
     device = resolve_device(config.device)
     csv_path = Path(config.csv_path)
     artifact_dir = Path(config.artifact_dir)
+    cache_dir = artifact_dir / "cache"
     tokenizer_path = build_tokenizer(
         csv_path=csv_path,
         model_prefix=artifact_dir / "debate_unigram",
@@ -51,21 +52,23 @@ def run_training(config: TrainConfig) -> None:
     )
     tokenizer = SentencePieceTokenizer(tokenizer_path)
 
-    train_dataset = CsvSeq2SeqDataset(
+    train_dataset = CsvSeq2SeqDataset.from_cache(
         csv_path=csv_path,
         tokenizer=tokenizer,
         size=config.train_size,
         offset=0,
         max_source_tokens=config.max_source_tokens,
         max_target_tokens=config.max_target_tokens,
+        cache_dir=cache_dir,
     )
-    val_dataset = CsvSeq2SeqDataset(
+    val_dataset = CsvSeq2SeqDataset.from_cache(
         csv_path=csv_path,
         tokenizer=tokenizer,
         size=config.val_size,
         offset=config.train_size,
         max_source_tokens=config.max_source_tokens,
         max_target_tokens=config.max_target_tokens,
+        cache_dir=cache_dir,
     )
 
     train_loader = DataLoader(
