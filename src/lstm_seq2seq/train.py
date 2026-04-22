@@ -30,6 +30,9 @@ class TrainConfig:
     hidden_dim: int = 512
     num_layers: int = 1
     learning_rate: float = 1e-3
+    lr_decay_factor: float = 0.5
+    lr_decay_patience: int = 2
+    min_learning_rate: float = 1e-5
     device: str = "auto"
     seed: int = 7
     csv_path: str = "all_debate_combined.csv"
@@ -100,6 +103,13 @@ def run_training(config: TrainConfig) -> None:
     ).to(device)
     criterion = nn.CrossEntropyLoss(ignore_index=PAD_TOKEN)
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=config.lr_decay_factor,
+        patience=config.lr_decay_patience,
+        min_lr=config.min_learning_rate,
+    )
     writer = SummaryWriter(log_dir=str(tensorboard_dir))
     print(f"tensorboard_run_dir={tensorboard_dir}")
 
@@ -127,6 +137,7 @@ def run_training(config: TrainConfig) -> None:
 
             train_loss = total_loss / max(total_tokens, 1)
             val_loss, sample_predictions = evaluate(model, val_loader, criterion, device, tokenizer)
+            scheduler.step(val_loss)
             writer.add_scalar("loss/train", train_loss, epoch)
             writer.add_scalar("loss/val", val_loss, epoch)
             writer.add_scalar("optimizer/learning_rate", optimizer.param_groups[0]["lr"], epoch)
@@ -134,7 +145,8 @@ def run_training(config: TrainConfig) -> None:
                 writer.add_text(f"samples/epoch_{epoch:02d}_{index}", sample, epoch)
             print(
                 f"epoch={epoch:02d} train_loss={train_loss:.4f} "
-                f"val_loss={val_loss:.4f}"
+                f"val_loss={val_loss:.4f} "
+                f"lr={optimizer.param_groups[0]['lr']:.6g}"
             )
             for sample in sample_predictions:
                 print(sample)

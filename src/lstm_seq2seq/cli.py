@@ -23,6 +23,9 @@ def build_parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--hidden-dim", type=int, default=512)
     train_parser.add_argument("--num-layers", type=int, default=1)
     train_parser.add_argument("--learning-rate", type=float, default=1e-3)
+    train_parser.add_argument("--lr-decay-factor", type=float, default=0.5)
+    train_parser.add_argument("--lr-decay-patience", type=int, default=2)
+    train_parser.add_argument("--min-learning-rate", type=float, default=1e-5)
     train_parser.add_argument("--device", default="auto")
     train_parser.add_argument("--seed", type=int, default=7)
     train_parser.add_argument("--csv-path", default="all_debate_combined.csv")
@@ -65,6 +68,9 @@ def main() -> None:
         hidden_dim=args.hidden_dim,
         num_layers=args.num_layers,
         learning_rate=args.learning_rate,
+        lr_decay_factor=args.lr_decay_factor,
+        lr_decay_patience=args.lr_decay_patience,
+        min_learning_rate=args.min_learning_rate,
         device=args.device,
         seed=args.seed,
         csv_path=args.csv_path,

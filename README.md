@@ -88,6 +88,12 @@ Allow longer sequences:
 uv run lstm-seq2seq train --max-source-tokens 256 --max-target-tokens 256
 ```
 
+Use validation-driven learning rate decay:
+
+```bash
+uv run lstm-seq2seq train --lr-decay-factor 0.5 --lr-decay-patience 2 --min-learning-rate 1e-5
+```
+
 Watch loss curves in TensorBoard:
 
 ```bash
